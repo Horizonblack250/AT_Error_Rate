@@ -13,19 +13,16 @@ def load_data():
     return df
 
 df = load_data()
-
 st.title("Airtrol Flow & Error Analysis Dashboard")
 
 # Sidebar
 st.sidebar.header("Select Time Window")
-
 min_time = df["Timestamp"].min()
 max_time = df["Timestamp"].max()
 
 # Date pickers
 start_date = st.sidebar.date_input("Start Date", min_time.date(), min_value=min_time.date(), max_value=max_time.date())
 start_time = st.sidebar.time_input("Start Time", min_time.time())
-
 end_date = st.sidebar.date_input("End Date", max_time.date(), min_value=min_time.date(), max_value=max_time.date())
 end_time = st.sidebar.time_input("End Time", max_time.time())
 
@@ -43,7 +40,6 @@ if plot_df.empty:
 
 # Plot
 fig = go.Figure()
-
 fig.add_trace(go.Scatter(
     x=plot_df["Timestamp"],
     y=plot_df["VFM Flow Rate (SCFM)"],
@@ -51,7 +47,6 @@ fig.add_trace(go.Scatter(
     name="VFM Flow Rate (SCFM)",
     line=dict(width=2)
 ))
-
 fig.add_trace(go.Scatter(
     x=plot_df["Timestamp"],
     y=plot_df["Flow_Rate_Calculated_SCFM"],
@@ -59,7 +54,6 @@ fig.add_trace(go.Scatter(
     name="Calculated Flow (SCFM)",
     line=dict(dash="dash", width=2, color="royalblue")
 ))
-
 fig.add_trace(go.Scatter(
     x=plot_df["Timestamp"],
     y=plot_df["Flow_Error_Percentage"],
@@ -85,12 +79,16 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# Show KPIs for the selected window
+# Calculate MAE using the proper formula
+actual = plot_df["VFM Flow Rate (SCFM)"]
+predicted = plot_df["Flow_Rate_Calculated_SCFM"]
+mae = (actual - predicted).abs().mean()
+
+# Calculate % within spec
 abs_err = plot_df["Flow_Error_Percentage"].abs()
 accuracy = (abs_err <= 10).mean() * 100
 
 st.subheader("Performance Overview")
 col1, col2 = st.columns(2)
-col1.metric("Mean ABS Error %", f"{abs_err.mean():.2f}%")
+col1.metric("MAE (SCFM)", f"{mae:.2f} SCFM")
 col2.metric("% Within ±10% Spec", f"{accuracy:.1f}%")
-
