@@ -1,8 +1,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+from datetime import datetime
 
-st.set_page_config(page_title="Airtrol Error Analysis Dashboard", layout="wide")
+# App settings
+st.set_page_config(page_title="Airtrol Flow & Error Dashboard", layout="wide")
 
 @st.cache_data
 def load_data():
@@ -14,33 +16,32 @@ df = load_data()
 
 st.title("Airtrol Flow & Error Analysis Dashboard")
 
-# Sidebar selection
-st.sidebar.header("Time Range Filter")
+# Sidebar
+st.sidebar.header("Select Time Window")
 
 min_time = df["Timestamp"].min()
 max_time = df["Timestamp"].max()
 
-start_time = st.sidebar.slider("Select start time",
-                               min_value=min_time,
-                               max_value=max_time,
-                               value=min_time,
-                               format="YYYY-MM-DD HH:mm:ss")
+# Date pickers
+start_date = st.sidebar.date_input("Start Date", min_time.date(), min_value=min_time.date(), max_value=max_time.date())
+start_time = st.sidebar.time_input("Start Time", min_time.time())
 
-end_time = st.sidebar.slider("Select end time",
-                             min_value=min_time,
-                             max_value=max_time,
-                             value=max_time,
-                             format="YYYY-MM-DD HH:mm:ss")
+end_date = st.sidebar.date_input("End Date", max_time.date(), min_value=min_time.date(), max_value=max_time.date())
+end_time = st.sidebar.time_input("End Time", max_time.time())
 
-# Filter data by time
-mask = (df["Timestamp"] >= start_time) & (df["Timestamp"] <= end_time)
-plot_df = df.loc[mask].copy()
+# Combine date & time fields
+start_dt = datetime.combine(start_date, start_time)
+end_dt = datetime.combine(end_date, end_time)
+
+# Filter dataset
+mask = (df["Timestamp"] >= start_dt) & (df["Timestamp"] <= end_dt)
+plot_df = df.loc[mask]
 
 if plot_df.empty:
-    st.warning("No data found in selected range.")
+    st.warning("⚠ No data available in the selected time window. Try expanding the range.")
     st.stop()
 
-# Plotting
+# Plot
 fig = go.Figure()
 
 fig.add_trace(go.Scatter(
@@ -56,7 +57,7 @@ fig.add_trace(go.Scatter(
     y=plot_df["Flow_Rate_Calculated_SCFM"],
     mode="lines",
     name="Calculated Flow (SCFM)",
-    line=dict(dash="dash", width=2)
+    line=dict(dash="dash", width=2, color="royalblue")
 ))
 
 fig.add_trace(go.Scatter(
@@ -69,9 +70,9 @@ fig.add_trace(go.Scatter(
 ))
 
 fig.update_layout(
-    title="Flow Comparison & Error %",
+    title="Flow vs Time with Error Overlay",
     xaxis=dict(title="Timestamp"),
-    yaxis=dict(title="Flow (SCFM)"),
+    yaxis=dict(title="Flow Rate (SCFM)"),
     yaxis2=dict(
         title="Error Percentage (%)",
         overlaying="y",
@@ -83,3 +84,13 @@ fig.update_layout(
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
+# Show KPIs for the selected window
+abs_err = plot_df["Flow_Error_Percentage"].abs()
+accuracy = (abs_err <= 10).mean() * 100
+
+st.subheader("Performance Overview")
+col1, col2 = st.columns(2)
+col1.metric("Mean ABS Error %", f"{abs_err.mean():.2f}%")
+col2.metric("% Within ±10% Spec", f"{accuracy:.1f}%")
+
