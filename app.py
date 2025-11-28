@@ -86,7 +86,7 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # Show KPIs for the selected window
-#abs_err = plot_df["Flow_Error_Percentage"].abs()
+abs_err = plot_df["Flow_Error_Percentage"].abs()
 accuracy = (abs_err <= 10).mean() * 100
 
 st.subheader("Performance Overview")
