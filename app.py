@@ -26,6 +26,10 @@ start_time = st.sidebar.time_input("Start Time", min_time.time())
 end_date = st.sidebar.date_input("End Date", max_time.date(), min_value=min_time.date(), max_value=max_time.date())
 end_time = st.sidebar.time_input("End Time", max_time.time())
 
+# Toggle for error percentage line
+st.sidebar.header("Display Options")
+show_error = st.sidebar.checkbox("Show Error Percentage Line", value=True)
+
 # Combine date & time fields
 start_dt = datetime.combine(start_date, start_time)
 end_dt = datetime.combine(end_date, end_time)
@@ -59,42 +63,48 @@ fig.add_trace(go.Scatter(
     line=dict(width=2, color="orange")
 ))
 
-# Add Error Percentage trace on secondary y-axis
-fig.add_trace(go.Scatter(
-    x=plot_df["Timestamp"],
-    y=plot_df["Flow_Error_Percentage"],
-    mode="lines",
-    name="Error Percentage (%)",
-    yaxis="y2",
-    line=dict(color="red", width=2)
-))
+# Conditionally add Error Percentage trace
+if show_error:
+    fig.add_trace(go.Scatter(
+        x=plot_df["Timestamp"],
+        y=plot_df["Flow_Error_Percentage"],
+        mode="lines",
+        name="Error Percentage (%)",
+        yaxis="y2",
+        line=dict(color="red", width=2)
+    ))
 
-# Update layout with fixed secondary y-axis range
-fig.update_layout(
-    title="Flow vs Time with Error Overlay",
-    xaxis=dict(title="Timestamp"),
-    yaxis=dict(
+# Update layout
+layout_config = {
+    "title": "Flow vs Time with Error Overlay",
+    "xaxis": dict(title="Timestamp"),
+    "yaxis": dict(
         title="Flow Rate (SCFM)",
         side="left"
     ),
-    yaxis2=dict(
+    "hovermode": "x unified",
+    "legend": dict(x=0, y=1),
+    "height": 600
+}
+
+# Add secondary y-axis only if error is shown
+if show_error:
+    layout_config["yaxis2"] = dict(
         title="Error Percentage (%)",
         overlaying="y",
         side="right",
         color="red",
         range=[-50, 50],
         showgrid=False
-    ),
-    hovermode="x unified",
-    legend=dict(x=0, y=1),
-    height=600
-)
+    )
+
+fig.update_layout(**layout_config)
 
 st.plotly_chart(fig, use_container_width=True)
 
 # Add info message about clipped errors
 max_error = plot_df["Flow_Error_Percentage"].abs().max()
-if max_error > 50:
+if show_error and max_error > 50:
     st.info(f"ℹ️ Note: Error percentage scale is fixed to ±50% for better visualization. Maximum error in selected window: {max_error:.1f}%")
 
 # Calculate % within spec
