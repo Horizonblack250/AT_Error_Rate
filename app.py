@@ -56,7 +56,7 @@ fig.add_trace(go.Scatter(
     y=plot_df["Flow_Rate_Calculated_SCFM"],
     mode="lines",
     name="Calculated Flow (SCFM)",
-    line=dict(dash="dash", width=2, color="royalblue")
+    line=dict(width=2, color="orange")
 ))
 
 # Add Error Percentage trace on secondary y-axis
@@ -82,7 +82,7 @@ fig.update_layout(
         overlaying="y",
         side="right",
         color="red",
-        range=[-50, 50],  # Fixed scale for error percentage
+        range=[-50, 50],
         showgrid=False
     ),
     hovermode="x unified",
@@ -97,17 +97,11 @@ max_error = plot_df["Flow_Error_Percentage"].abs().max()
 if max_error > 50:
     st.info(f"ℹ️ Note: Error percentage scale is fixed to ±50% for better visualization. Maximum error in selected window: {max_error:.1f}%")
 
-# Calculate MAE using the proper formula
-actual = plot_df["VFM Flow Rate (SCFM)"]
-predicted = plot_df["Flow_Rate_Calculated_SCFM"]
-mae = (actual - predicted).abs().mean()
-
 # Calculate % within spec
 abs_err = plot_df["Flow_Error_Percentage"].abs()
 accuracy = (abs_err <= 10).mean() * 100
 
 st.subheader("Performance Overview")
-col1, col2, col3 = st.columns(3)
-col1.metric("MAE (SCFM)", f"{mae:.2f} SCFM")
-col2.metric("% Within ±10% Spec", f"{accuracy:.1f}%")
-col3.metric("Max Error %", f"{max_error:.1f}%")
+col1, col2 = st.columns(2)
+col1.metric("% Within ±10% Spec", f"{accuracy:.1f}%")
+col2.metric("Max Error %", f"{max_error:.1f}%")
